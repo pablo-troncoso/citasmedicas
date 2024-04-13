@@ -1,35 +1,62 @@
-// Importar Express
+const axios = require('axios');
 const express = require('express');
-const axios = require('axios'); // Importar Axios
+const { v4: uuidv4 } = require('uuid');
+const _ = require('lodash');
+const moment = require('moment');
+const chalk = require('chalk');
 
 // Express
 const app = express();
 
-// Middleware JSON
-app.use(express.json());
+const dataUser = [];
 
-// Ruta para el Registro de usuarios
-app.post('/registro', async (req, res) => {
-  try {
-    // Solicitud a la API Random User
-    const response = await axios.get('https://randomuser.me/api/');
-    
-    // Extraer los datos del usuario de la respuesta
-    const usuario = response.data.results[0];
-    
-    // Datos del Usuario
-    console.log(usuario);
-    
-    // Enviar una respuesta al cliente
-    res.status(201).json({ mensaje: 'Registrado exitosamente', usuario });
-  } catch (error) {
-    console.error('Error al Registrar usuario:', error);
-    res.status(500).json({ error: 'Error al registrar usuario' });
-  }
+const instanceAxios = axios.create({
+    baseURL: 'https://randomuser.me/api/',
 });
 
-// Definir Puerto 
+// Obtener Usuario
+const getUser = async () => {
+    const { data } = await instanceAxios.get();
+    const user = {
+        id: uuidv4(),
+        name: data.results[0].name.first,
+        last_name: data.results[0].name.last,
+        registered: moment(data.results[0].registered.date).format('LLLL')
+    };
+    return user;
+};
+
+// Usuario
+app.get('/add-user', async (req, res) => {
+    try {
+        const user = await getUser();
+        console.log(user);
+        dataUser.push(user);
+        res.send(`Usuario ${user.name} Agregado Correctamente`);
+        console.log(`Usuario ${user.name} Agregado Correctamente`);
+    } catch (error) {
+        console.error('Error al agregar usuario:', error.message);
+        res.status(500).send('Error al agregar usuario');
+    }
+});
+
+//Obtener Usuario
+app.get('/get-user', async (req, res) => {
+    try {
+        let data = '';
+        _.forEach(dataUser, (user, i) => {
+            data += `${i + 1}. Nombre: ${user.name} - Apellido: ${user.last_name} - ID: ${user.id} - TimeStamp: ${user.registered}<br>`;
+            console.log(chalk.blue.bgWhite(`${i + 1}. Nombre: ${user.name} - Apellido: ${user.last_name} - ID: ${user.id} - TimeStamp: ${user.registered}`));
+        });
+        res.send(data);
+    } catch (error) {
+        console.error('Error al obtener usuarios:', error.message);
+        res.status(500).send('Error al obtener usuarios');
+    }
+});
+
+// Servidor 3000
 const PORT = 3000;
 app.listen(PORT, () => {
-  console.log(`Servidor inicializado en el puerto ${PORT}`);
+    console.log(`Server listening on port ${PORT}`);
 });
